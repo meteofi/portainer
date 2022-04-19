@@ -1,0 +1,104 @@
+version: '3'
+services:
+  smartmetserver:
+    image: fmidev/smartmetserver:latest
+    container_name: smartmetserver
+    labels:
+      - "traefik.http.routers.smartmetserver.entrypoints=websecure"
+      - "traefik.http.routers.smartmetserver.rule=Host(`data.${APPDOMAIN:-local}`)"
+      - "traefik.http.services.smartmetserver.loadbalancer.server.port=8080"
+    volumes:
+      - model-fmi-hirlam:/smartmet/data/hirlam
+      - model-fmi-meps:/smartmet/data/meps
+      - model-fmi-wam:/smartmet/data/wam
+      - model-fmi-hbm:/smartmet/data/hbm
+      - model-ncep-gfs:/smartmet/data/gfs
+      - model-cmc-gem:/smartmet/data/gem
+    networks:
+      - traefik-network
+    restart: unless-stopped
+  hirlam-surface:
+    image: fmidev/fmidownloader
+    container_name: fmidownloader-hirlam-surface
+    command:
+      - "--producer=hirlam"
+      - "--dir=surface"
+      - "--filename=hirlam_europe_surface"
+      - "--parameters=Temperature,DewPoint,Humidity,WindDirection,WindSpeedMS,WindGust,TotalCloudCover,Precipitation1h,WeatherSymbol3,Pressure,CAPE,CIN"
+    volumes:
+      - model-fmi-hirlam:/tmp
+    restart: unless-stopped
+  hirlam-pressure:
+    image: fmidev/fmidownloader
+    container_name: fmidownloader-hirlam-pressure
+    command:
+      - "--producer=hirlam_painepinta"
+      - "--dir=pressure"
+      - "--filename=hirlam_europe_pressure"
+      - "--parameters=Humidity,Temperature,GeopHeight,WindDirection,WindSpeedMS,DewPoint"
+    volumes:
+      - model-fmi-hirlam:/tmp
+    restart: unless-stopped
+  meps-surface:
+    image: fmidev/fmidownloader
+    container_name: fmidownloader-meps-surface
+    command:
+      - "--producer=harmonie_scandinavia_surface"
+      - "--dir=surface"
+      - "--filename=meps_northeurope_surface"
+      - "--parameters=Temperature,DewPoint,Humidity,WindDirection,WindSpeedMS,WindGust,TotalCloudCover,Precipitation1h,WeatherSymbol3,Pressure,CAPE,CIN"
+    volumes:
+      - model-fmi-meps:/tmp
+    restart: unless-stopped
+  meps-pressure:
+    image: fmidev/fmidownloader
+    container_name: fmidownloader-meps-pressure
+    command:
+      - "--producer=harmonie_scandinavia_pressure"
+      - "--dir=pressure"
+      - "--filename=meps_northeurope_pressure"
+      - "--parameters=Humidity,Temperature,GeopHeight,WindDirection,WindSpeedMS,DewPoint"
+    volumes:
+      - model-fmi-meps:/tmp
+    restart: unless-stopped
+  hbm:
+    image: fmidev/fmidownloader
+    container_name: fmidownloader-hbm
+    command:
+      - "--producer=hbm"
+      - "--dir=surface"
+      - "--filename=hbm_baltic_surface"
+      - "--parameters=TemperatureSea,SeaWaterVelocityU,SeaWaterVelocityV"
+    volumes:
+      - model-fmi-hbm:/tmp
+    restart: unless-stopped
+
+  wam:
+    image: fmidev/fmidownloader
+    container_name: fmidownloader-wam
+    command:
+      - "--producer=wam"
+      - "--dir=surface"
+      - "--filename=wam_baltic_surface"
+      - "--parameters=SigWaveHeight,SigWavePeriod,WaveDirection"
+    volumes:
+      - model-fmi-wam:/tmp
+    restart: unless-stopped
+
+volumes:
+  model-fmi-hirlam:
+    name: model-fmi-hirlam
+  model-fmi-meps:
+    name: model-fmi-meps
+  model-fmi-hbm:
+    name: model-fmi-hbm
+  model-fmi-wam:
+    name: model-fmi-wam
+  model-ncep-gfs:
+    name: model-ncep-gfs
+  model-cmc-gem:
+    name: model-cmc-gem
+    
+networks:
+    traefik-network:
+      external: true
